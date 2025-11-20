@@ -1,0 +1,5 @@
+{
+  "name": "VPS大玩家: Oneman 模拟器",
+  "description": "扮演一个 Oneman 主机商，从一台二手服务器开始，切分资源、超售、应对 DDOS 攻击，建立你的云服务帝国。",
+  "requestFramePermissions": []
+}
