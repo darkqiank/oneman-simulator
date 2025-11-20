@@ -146,46 +146,51 @@ export const calculateChurn = (
 ) => {
   if (activeUsers === 0) return 0;
 
-  // NEW LOGIC: "Subscribers should last at least a month"
-  // 1. New User Shield: If game is in first month (Day < 30), churn is 0.
+  // 新手保护期：前 30 天没有流失
   if (currentDay < 30) return 0;
 
-  // New Model: 30-Day Subscription Cycle
-  // Statistically, 1/30th of users reach their renewal date each day.
+  // 订阅周期模型：每天约有 1/30 的用户到期需要续费
+  // 统计学上，所有用户平均分布在 30 天的订阅周期内
   const expiringUsers = Math.ceil(activeUsers / 30);
   
-  // Retention Rate Calculation
-  // Base retention depends on reputation. 
-  // UPDATED: Base retention much higher. Rep 50 -> 95% retention. Rep 100 -> 99%.
-  let retentionRate = 0.90 + (reputation / 100) * 0.09; 
+  // 续费率计算（Renewal Rate，而非 Retention Rate）
+  // 基础续费率：根据口碑，口碑越高续费率越高
+  // 口碑 60 -> 70% 续费，口碑 80 -> 80% 续费，口碑 100 -> 90% 续费
+  let renewalRate = 0.50 + (reputation / 100) * 0.40; 
 
-  // Research modifiers
+  // 科研加成（提升续费率）
   unlockedResearch.forEach(id => {
       const r = RESEARCH_UPGRADES.find(u => u.id === id);
-      if (r?.effectType === 'churn_reduce') retentionRate += r.effectValue;
+      if (r?.effectType === 'churn_reduce') renewalRate += r.effectValue;
   });
 
-  // Service Quality Penalties (affecting renewal decision)
-  if (oversellingRatio > 1.2) retentionRate -= 0.05; 
-  if (oversellingRatio > 1.5) retentionRate -= 0.15; 
-  if (oversellingRatio > 2.0) retentionRate -= 0.30; 
-  if (oversellingRatio > 4.0) retentionRate -= 0.50; 
+  // 服务质量惩罚（降低续费意愿）
+  if (oversellingRatio > 1.2) renewalRate -= 0.08; 
+  if (oversellingRatio > 1.5) renewalRate -= 0.15; 
+  if (oversellingRatio > 2.0) renewalRate -= 0.25; 
+  if (oversellingRatio > 3.0) renewalRate -= 0.35; 
+  if (oversellingRatio > 5.0) renewalRate -= 0.50; 
 
-  if (ddosSeverity > 0) retentionRate -= 0.20;
+  // DDOS 惩罚
+  if (ddosSeverity > 0) renewalRate -= (0.15 * ddosSeverity);
 
-  // Clamp retention
-  retentionRate = Math.max(0, Math.min(1, retentionRate));
+  // 限制续费率范围 [0, 1]
+  renewalRate = Math.max(0, Math.min(1, renewalRate));
 
-  // Calculate churn from non-renewals
-  let churnCount = Math.floor(expiringUsers * (1 - retentionRate));
+  // 计算流失数量 = 到期用户数 × (1 - 续费率)
+  let churnCount = Math.floor(expiringUsers * (1 - renewalRate));
   
-  // Random factor prevents exact mathematical drops every tick
-  if (Math.random() < 0.1 && churnCount < expiringUsers) churnCount += 1;
+  // 增加一些随机性，避免数字过于机械
+  if (Math.random() < 0.15) {
+      churnCount += Math.random() < 0.5 ? 1 : -1;
+      churnCount = Math.max(0, churnCount);
+  }
 
-  // Rage Quits (Mid-cycle cancellation)
-  // Users only leave mid-month if service is completely unusable.
+  // 愤怒退订（中途退订）
+  // 只有在服务极差时才会发生，用户不等到期就直接退订
   let rageQuitChurn = 0;
-  if (oversellingRatio > 5.0 || ddosSeverity > 3.0) {
+  if (oversellingRatio > 6.0 || ddosSeverity > 2.5) {
+      // 极端情况下，额外 5% 的用户会立即退订
       rageQuitChurn = Math.ceil(activeUsers * 0.05); 
   }
 

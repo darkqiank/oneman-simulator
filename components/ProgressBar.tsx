@@ -18,38 +18,35 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({ label, used, total, un
   if (percentage > 90) { barColor = "bg-cyber-warning"; textColor = "text-cyber-warning"; }
   if (percentage > 100) { barColor = "bg-cyber-danger"; textColor = "text-cyber-danger"; }
 
-  const shadowColor = barColor.replace('bg-', 'shadow-');
-
   return (
-    <div className="mb-3 group">
-      <div className="flex justify-between text-xs mb-1 font-mono">
+    <div className="group">
+      <div className="flex justify-between text-[10px] mb-1 font-mono">
         <span className="text-slate-400 uppercase tracking-wider">{label}</span>
-        <span className={`${percentage > 100 ? "text-cyber-danger animate-pulse" : "text-slate-300"}`}>
-          {used.toFixed(1)} <span className="text-slate-500">/</span> {total.toFixed(1)} {unit}
+        <span className={`font-bold ${percentage > 100 ? "text-cyber-danger animate-pulse" : textColor}`}>
+          {used.toFixed(1)}<span className="text-slate-600 text-[8px]">/</span>{total.toFixed(1)} <span className="text-[8px]">{unit}</span>
         </span>
       </div>
       
-      <div className="w-full bg-slate-900/80 h-3 border border-slate-800 relative overflow-hidden">
-        {/* Grid lines overlay */}
-        <div className="absolute inset-0 w-full h-full flex" style={{pointerEvents: 'none'}}>
-            {[...Array(10)].map((_, i) => (
-                <div key={i} className="flex-1 border-r border-black/40 h-full last:border-0"></div>
-            ))}
-        </div>
-
+      <div className="w-full bg-slate-900/80 h-2 border border-slate-800 relative overflow-hidden">
         {/* The Bar */}
         <div 
-          className={`h-full transition-all duration-500 ${barColor} shadow-[0_0_10px_rgba(0,0,0,0.5)] relative`} 
+          className={`h-full transition-all duration-500 ${barColor} relative`} 
           style={{ width: `${Math.min(percentage, 100)}%` }}
         >
             {/* Glint effect */}
-            <div className="absolute top-0 right-0 bottom-0 w-[2px] bg-white/50 shadow-[0_0_8px_white]"></div>
+            <div className="absolute top-0 right-0 bottom-0 w-[1px] bg-white/50"></div>
         </div>
 
         {/* Overselling warning stripes */}
         {percentage > 100 && (
-             <div className="absolute inset-0 w-full h-full bg-[linear-gradient(45deg,transparent_25%,rgba(255,0,60,0.2)_25%,rgba(255,0,60,0.2)_50%,transparent_50%,transparent_75%,rgba(255,0,60,0.2)_75%,rgba(255,0,60,0.2)_100%)] bg-[length:10px_10px]"></div>
+             <div className="absolute inset-0 w-full h-full bg-[linear-gradient(45deg,transparent_25%,rgba(255,0,60,0.2)_25%,rgba(255,0,60,0.2)_50%,transparent_50%,transparent_75%,rgba(255,0,60,0.2)_75%,rgba(255,0,60,0.2)_100%)] bg-[length:8px_8px] animate-pulse"></div>
         )}
+      </div>
+      
+      <div className="mt-0.5 text-right">
+        <span className={`text-[8px] font-mono ${percentage > 100 ? 'text-cyber-danger' : 'text-slate-500'}`}>
+          {percentage.toFixed(0)}%
+        </span>
       </div>
     </div>
   );

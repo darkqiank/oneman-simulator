@@ -1,8 +1,8 @@
 
 import { HardwareModel, VPSPlan, Forum, AdPlatform, Influencer, Language, Milestone, GameState, ResearchItem } from './types';
 
-export const INITIAL_CASH = 2000; // Increased from 800
-export const INITIAL_REPUTATION = 60; // Increased from 50
+export const INITIAL_CASH = 1500; // Increased from 800
+export const INITIAL_REPUTATION = 50; // Increased from 50
 
 // --- Translations ---
 export const TRANSLATIONS = {
@@ -264,30 +264,30 @@ export const HARDWARE_CATALOG: HardwareModel[] = [
 // --- Marketing Data ---
 
 export const FORUMS: Forum[] = [
-  { id: 'linuxdo', name: 'Linux.do', risk: 0.1, trafficPotential: 5, userQuality: 0.9 },
-  { id: 'nodeseek', name: 'NodeSeek', risk: 0.3, trafficPotential: 8, userQuality: 0.6 },
-  { id: 'v2ex', name: 'V2EX', risk: 0.6, trafficPotential: 6, userQuality: 0.8 },
-  { id: 'hostloc', name: 'HostLoc', risk: 0.8, trafficPotential: 15, userQuality: 0.3 }, // High traffic, high risk (DDOS/Scammers)
+  { id: 'linuxdo', name: 'Linux.do', risk: 0.1, trafficPotential: 3, userQuality: 0.9 },
+  { id: 'nodeseek', name: 'NodeSeek', risk: 0.3, trafficPotential: 5, userQuality: 0.7 },
+  { id: 'v2ex', name: 'V2EX', risk: 0.5, trafficPotential: 4, userQuality: 0.8 },
+  { id: 'hostloc', name: 'HostLoc', risk: 0.8, trafficPotential: 8, userQuality: 0.4 }, // High traffic, high risk (DDOS/Scammers)
 ];
 
 export const ADS: AdPlatform[] = [
-  { id: 'google', name: 'Google Ads', cost: 500, trafficBoost: 2.0 },
-  { id: 'telegram', name: 'Telegram Channel', cost: 200, trafficBoost: 1.5 },
-  { id: 'adult', name: 'P*rnHub Ads', cost: 1000, trafficBoost: 4.0 },
+  { id: 'google', name: 'Google Ads', cost: 250, trafficBoost: 2.0 },
+  { id: 'telegram', name: 'Telegram 频道', cost: 150, trafficBoost: 1.5 },
+  { id: 'adult', name: '成人网站广告', cost: 350, trafficBoost: 2.5 },
 ];
 
 export const KOLS: Influencer[] = [
-  { id: 'small', name: 'Small Tech Blogger', cost: 300, trafficBoost: 2.5, reputationImpact: 2 },
-  { id: 'medium', name: 'Affiliate Man', cost: 800, trafficBoost: 5.0, reputationImpact: -5 }, // High traffic but people hate AFF man
-  { id: 'large', name: 'Top Tier Reviewer', cost: 2500, trafficBoost: 10.0, reputationImpact: 10 },
+  { id: 'small', name: '野生技术博主', cost: 250, trafficBoost: 1.8, reputationImpact: 3 },
+  { id: 'medium', name: 'Affiliate Man', cost: 400, trafficBoost: 3.5, reputationImpact: -3 }, // High traffic but people hate AFF man
+  { id: 'large', name: '顶流测评师', cost: 1500, trafficBoost: 5.0, reputationImpact: 8 },
 ];
 
 // --- Research Tree ---
 export const RESEARCH_UPGRADES: ResearchItem[] = [
     {
         id: 'auto_bot_v1',
-        name: 'Auto-Support Bot',
-        description: 'Use simple scripts to auto-reply to 30% of basic questions.',
+        name: '自动客服机器人',
+        description: '使用简单脚本自动回复 30% 的基础问题，节省人力成本。',
         cost: 500,
         effectType: 'auto_ticket',
         effectValue: 0.3,
@@ -296,8 +296,8 @@ export const RESEARCH_UPGRADES: ResearchItem[] = [
     },
     {
         id: 'liquid_cooling',
-        name: 'Optimized Cooling',
-        description: 'Better airflow reduces server upkeep costs by 15%.',
+        name: '优化散热系统',
+        description: '改善机房散热，降低服务器维护成本 15%。',
         cost: 800,
         effectType: 'upkeep_reduce',
         effectValue: 0.15,
@@ -306,8 +306,8 @@ export const RESEARCH_UPGRADES: ResearchItem[] = [
     },
     {
         id: 'seo_mastery',
-        name: 'SEO Mastery',
-        description: 'Rank higher on search engines. Marketing boost +20%.',
+        name: 'SEO 优化大师',
+        description: '搜索引擎排名提升，营销效果增强 20%。',
         cost: 1200,
         effectType: 'marketing_boost',
         effectValue: 0.2,
@@ -316,8 +316,8 @@ export const RESEARCH_UPGRADES: ResearchItem[] = [
     },
     {
         id: 'churn_algo',
-        name: 'Loyalty Program',
-        description: 'Keep users happy longer. Reduces churn rate by 10%.',
+        name: '用户忠诚计划',
+        description: '提升用户满意度和粘性，降低流失率 10%。',
         cost: 1500,
         effectType: 'churn_reduce',
         effectValue: 0.1,
@@ -327,7 +327,7 @@ export const RESEARCH_UPGRADES: ResearchItem[] = [
     {
         id: 'anycast_dns',
         name: 'Anycast DNS',
-        description: 'Faster resolution. Reduces "Slow Speed" tickets significantly.',
+        description: '全球加速解析，显著减少"速度慢"工单。',
         cost: 2000,
         effectType: 'churn_reduce',
         effectValue: 0.15,
@@ -349,6 +349,7 @@ export const RESEARCH_UPGRADES: ResearchItem[] = [
 export const INITIAL_PLANS: VPSPlan[] = [];
 
 export const MILESTONES: Milestone[] = [
+  // 初级成就
   {
     id: 'first_user',
     name: 'Hello World',
@@ -358,15 +359,41 @@ export const MILESTONES: Milestone[] = [
     achieved: false
   },
   {
-    id: 'server_owner',
-    name: 'Cluster Admin',
-    description: '拥有 3 台服务器',
-    rewardCash: 300,
-    condition: (state: GameState) => state.servers.length >= 3,
+    id: 'first_server',
+    name: '机房初建',
+    description: '购买第一台服务器',
+    rewardCash: 100,
+    condition: (state: GameState) => state.servers.length >= 2,
     achieved: false
   },
   {
-    id: 'traffic_master',
+    id: 'first_plan',
+    name: '产品经理',
+    description: '创建第一个 VPS 套餐',
+    rewardCash: 80,
+    condition: (state: GameState) => state.plans.length >= 2,
+    achieved: false
+  },
+  {
+    id: 'cash_1k',
+    name: '资本萌芽',
+    description: '累积现金达到 $1,000',
+    rewardCash: 200,
+    condition: (state: GameState) => state.cash >= 1000,
+    achieved: false
+  },
+  
+  // 中级成就
+  {
+    id: 'users_10',
+    name: '十人团',
+    description: '总用户数达到 10 人',
+    rewardCash: 150,
+    condition: (state: GameState) => state.plans.reduce((acc, p) => acc + p.activeUsers, 0) >= 10,
+    achieved: false
+  },
+  {
+    id: 'users_50',
     name: 'Traffic Master',
     description: '总用户数达到 50 人',
     rewardCash: 500,
@@ -374,11 +401,137 @@ export const MILESTONES: Milestone[] = [
     achieved: false
   },
   {
-    id: 'reputation_king',
+    id: 'users_100',
+    name: '百人俱乐部',
+    description: '总用户数达到 100 人',
+    rewardCash: 1000,
+    condition: (state: GameState) => state.plans.reduce((acc, p) => acc + p.activeUsers, 0) >= 100,
+    achieved: false
+  },
+  {
+    id: 'server_3',
+    name: 'Cluster Admin',
+    description: '拥有 3 台服务器',
+    rewardCash: 300,
+    condition: (state: GameState) => state.servers.length >= 3,
+    achieved: false
+  },
+  {
+    id: 'reputation_70',
+    name: '口碑不错',
+    description: '声望达到 70',
+    rewardCash: 400,
+    condition: (state: GameState) => state.reputation >= 70,
+    achieved: false
+  },
+  {
+    id: 'reputation_90',
     name: 'Legendary Host',
     description: '声望达到 90',
     rewardCash: 1000,
     condition: (state: GameState) => state.reputation >= 90,
+    achieved: false
+  },
+  
+  // 高级成就
+  {
+    id: 'cash_10k',
+    name: '小康生活',
+    description: '累积现金达到 $10,000',
+    rewardCash: 1500,
+    condition: (state: GameState) => state.cash >= 10000,
+    achieved: false
+  },
+  {
+    id: 'users_200',
+    name: '双百目标',
+    description: '总用户数达到 200 人',
+    rewardCash: 2000,
+    condition: (state: GameState) => state.plans.reduce((acc, p) => acc + p.activeUsers, 0) >= 200,
+    achieved: false
+  },
+  {
+    id: 'server_5',
+    name: '机房扩建',
+    description: '拥有 5 台服务器',
+    rewardCash: 800,
+    condition: (state: GameState) => state.servers.length >= 5,
+    achieved: false
+  },
+  {
+    id: 'reputation_100',
+    name: '五星好评',
+    description: '声望达到满分 100',
+    rewardCash: 2000,
+    condition: (state: GameState) => state.reputation >= 100,
+    achieved: false
+  },
+  {
+    id: 'plans_5',
+    name: '产品矩阵',
+    description: '同时在售 5 款产品',
+    rewardCash: 600,
+    condition: (state: GameState) => state.plans.length >= 5,
+    achieved: false
+  },
+  
+  // 专家成就
+  {
+    id: 'overselling_master',
+    name: '超售大师',
+    description: '超售率达到 8.0x',
+    rewardCash: 1500,
+    condition: (state: GameState) => {
+      const metrics = state.plans.reduce((acc, p) => {
+        acc.totalCpuUsed += p.cpuCores * p.activeUsers;
+        return acc;
+      }, { totalCpuUsed: 0 });
+      const totalCpuCapacity = state.servers.reduce((acc, s) => {
+        const hw = HARDWARE_CATALOG.find(h => h.id === s.modelId);
+        return acc + (hw?.cpuCores || 0);
+      }, 0);
+      const ratio = totalCpuCapacity > 0 ? metrics.totalCpuUsed / totalCpuCapacity : 0;
+      return ratio >= 8.0;
+    },
+    achieved: false
+  },
+  {
+    id: 'day_30',
+    name: '一周年庆典',
+    description: '存活 365 天',
+    rewardCash: 300,
+    condition: (state: GameState) => state.day >= 365,
+    achieved: false
+  },
+  {
+    id: 'day_3650',
+    name: '十年老店',
+    description: '存活 3650 天',
+    rewardCash: 2000,
+    condition: (state: GameState) => state.day >= 3650,
+    achieved: false
+  },
+  {
+    id: 'research_3',
+    name: '科技先锋',
+    description: '解锁 3 项研究',
+    rewardCash: 1000,
+    condition: (state: GameState) => state.research.length >= 3,
+    achieved: false
+  },
+  {
+    id: 'multi_region',
+    name: '全球布局',
+    description: '在 3 个不同地区部署服务器',
+    rewardCash: 1200,
+    condition: (state: GameState) => {
+      const regions = new Set();
+      state.servers.forEach(s => {
+        const hw = HARDWARE_CATALOG.find(h => h.id === s.modelId);
+        if (hw) regions.add(hw.region);
+      });
+      return regions.size >= 3;
+    },
     achieved: false
   }
 ];
@@ -392,27 +545,27 @@ export const USER_NAMES = [
 
 export const REVIEWS = {
     positive: [
-        "Speed is amazing! 速度起飞！",
-        "Best value for money. 性价比无敌。",
-        "Setup was instant. 秒开通，爱了。",
-        "Ping is very low to Shanghai. 上海延迟很低。",
-        "Support is friendly. 客服态度不错。",
-        "Running stable for a week. 稳如老狗。"
+        "速度起飞！",
+        "性价比无敌。",
+        "秒开通，爱了。",
+        "上海延迟很低。",
+        "客服态度不错。",
+        "稳如老狗。"
     ],
     neutral: [
-        "It's okay for the price. 价格对得起配置。",
-        "Not bad, not great. 中规中矩。",
-        "Ping is fluctuating. 晚高峰有点抖。",
-        "Waiting for restock. 等补货。",
-        "Panel is a bit ugly but works. 面板有点丑但能用。"
+        "价格对得起配置。",
+        "中规中矩。",
+        "晚高峰有点抖。",
+        "等补货。",
+        "面板有点丑但能用。"
     ],
     negative: [
-        "SCAM HOST! 垃圾商家！",
-        "Server is down again. 又炸了？",
-        "Refund my money! RNM退钱！",
-        "Disk I/O is terrible. 硬盘I/O慢得像软盘。",
-        "Network congested 24/7. 24小时炸线。",
-        "Support never replies. 工单三天没回。",
-        "Oversold like crazy. 超售狂魔。"
+        "垃圾商家！",
+        "又炸了？",
+        "RNM退钱！",
+        "硬盘I/O慢得像软盘。",
+        "24小时炸线。",
+        "工单三天没回。",
+        "超售狂魔。"
     ]
 };

@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useLayoutEffect } from 'react';
 import { 
   Server, Activity, Users, DollarSign, HardDrive, Cpu, Plus, Play, Pause, AlertTriangle,
   ShoppingCart, Trash2, Terminal as TerminalIcon, Zap, TrendingUp, Shield, Megaphone, Wrench,
@@ -38,7 +38,7 @@ const DEFAULT_GAME_STATE: GameState = {
   reviews: [],
   research: [],
   paused: true,
-  gameSpeed: 1000,
+  gameSpeed: 2000, // 调慢到 2 秒/天，给玩家更多操作时间
   marketingBoost: 1.0,
   ddosSeverity: 0,
   language: 'zh',
@@ -113,7 +113,15 @@ export default function App() {
 
   const t = TRANSLATIONS[gameState.language];
 
-  // 确保页面加载时滚动到顶部
+  // 使用 useLayoutEffect 确保在 DOM 渲染前滚动到顶部
+  useLayoutEffect(() => {
+    // 立即滚动到顶部，不等待
+    window.scrollTo(0, 0);
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
+  }, []);
+
+  // 额外的 useEffect 作为备份
   useEffect(() => {
     window.scrollTo(0, 0);
   }, []);
@@ -585,7 +593,7 @@ export default function App() {
           </div>
           {/* Show Rep on mobile but simpler */}
           <div className="flex flex-col items-end border-r border-slate-700 pr-2 md:pr-4">
-             <span className="text-slate-500 text-[8px] md:text-[9px] uppercase tracking-widest">REP</span>
+             <span className="text-slate-500 text-[8px] md:text-[9px] uppercase tracking-widest">名声</span>
              <span className={`font-bold text-sm md:text-xl leading-none ${gameState.reputation > 80 ? 'text-cyber-primary' : 'text-cyber-warning'}`}>
                {gameState.reputation.toFixed(0)}
              </span>
@@ -731,11 +739,11 @@ export default function App() {
                     className="col-span-1"
                   />
                   <DashboardCard 
-                    title={t.dashboard.activeVolume}
-                    value={metrics.onlineUsers} 
-                    icon={<Activity />} 
-                    colorClass="text-cyber-warning"
-                    subtext="LIVE"
+                    title="营销流量"
+                    value={`${gameState.marketingBoost.toFixed(1)}x`} 
+                    icon={<TrendingUp />} 
+                    colorClass={gameState.marketingBoost > 3 ? "text-cyber-danger" : gameState.marketingBoost > 2 ? "text-cyber-warning" : "text-slate-400"}
+                    subtext={gameState.marketingBoost > 1 ? "流量爆发中" : "基础流量"}
                     className="col-span-2 md:col-span-1"
                   />
                </div>
@@ -791,13 +799,31 @@ export default function App() {
                       </div>
                     ) : (
                       <>
-                         <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-4 mb-4 md:mb-6 bg-black/20 p-2 md:p-4 border border-slate-800">
-                            <ProgressBar label={t.dashboard.cpuLoad} used={metrics.totalCpuUsed} total={metrics.totalCpuCapacity} unit="C" color="bg-cyber-primary"/>
-                            <ProgressBar label={t.dashboard.ramAlloc} used={metrics.totalRamUsed} total={metrics.totalRamCapacity} unit="GB" color="bg-cyber-secondary"/>
-                            <ProgressBar label={t.dashboard.diskIo} used={metrics.totalDiskUsed} total={metrics.totalDiskCapacity} unit="GB" color="bg-cyber-warning"/>
-                            <ProgressBar label={t.dashboard.bwLoad} used={metrics.totalBandwidthUsed} total={metrics.totalBandwidthCapacity} unit="M" color="bg-cyan-400"/>
+                         {/* 紧凑的性能监控卡片 */}
+                         <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mb-3">
+                            {/* CPU & RAM 卡片 */}
+                            <div className="bg-black/30 border border-slate-800/50 p-2.5 space-y-2">
+                               <div className="flex items-center gap-2 mb-2">
+                                  <Cpu size={14} className="text-cyber-primary" />
+                                  <span className="text-[10px] text-slate-500 uppercase font-mono tracking-wider">处理器 & 内存</span>
                          </div>
-                         <div className="space-y-2 md:space-y-3">
+                               <ProgressBar label="CPU" used={metrics.totalCpuUsed} total={metrics.totalCpuCapacity} unit="核" color="bg-cyber-primary"/>
+                               <ProgressBar label="RAM" used={metrics.totalRamUsed} total={metrics.totalRamCapacity} unit="GB" color="bg-cyber-secondary"/>
+                            </div>
+                            
+                            {/* Disk & BW 卡片 */}
+                            <div className="bg-black/30 border border-slate-800/50 p-2.5 space-y-2">
+                               <div className="flex items-center gap-2 mb-2">
+                                  <HardDrive size={14} className="text-cyber-warning" />
+                                  <span className="text-[10px] text-slate-500 uppercase font-mono tracking-wider">存储 & 带宽</span>
+                               </div>
+                               <ProgressBar label="磁盘" used={metrics.totalDiskUsed} total={metrics.totalDiskCapacity} unit="GB" color="bg-cyber-warning"/>
+                               <ProgressBar label="带宽" used={metrics.totalBandwidthUsed} total={metrics.totalBandwidthCapacity} unit="M" color="bg-cyan-400"/>
+                            </div>
+                         </div>
+                         
+                         {/* 服务器列表 */}
+                         <div className="space-y-2">
                            {gameState.servers.map(server => (
                               <ServerRack 
                                 key={server.id} 
@@ -837,66 +863,78 @@ export default function App() {
           {/* MARKET TAB */}
           {activeTab === 'market' && (
              <div className="space-y-3 animate-fade-in">
-               <div className="flex justify-between items-center bg-cyber-panel/40 p-3 border-l-4 border-cyber-success clip-card">
-                 <div>
-                   <h2 className="text-base md:text-lg font-bold font-mono text-white flex items-center gap-2">
-                       <ShoppingCart className="text-cyber-success" size={18} /> {t.market.title}
-                   </h2>
-                   <p className="text-[10px] text-slate-500 font-mono mt-0.5">{HARDWARE_CATALOG.filter(h => h.isPurchasable !== false).length} 款可选</p>
+               {/* Header */}
+               <div className="flex justify-between items-center bg-cyber-panel/40 p-2.5 border-l-4 border-cyber-success clip-card">
+                 <div className="flex items-center gap-2">
+                   <ShoppingCart className="text-cyber-success" size={16} />
+                   <div>
+                     <h2 className="text-sm md:text-base font-bold font-mono text-white">{t.market.title}</h2>
+                     <p className="text-[9px] text-slate-500 font-mono">{HARDWARE_CATALOG.filter(h => h.isPurchasable !== false).length} 款可选</p>
+                   </div>
                  </div>
-                 <div className="text-xs text-slate-400 font-mono bg-black/40 px-3 py-1.5 border border-slate-700">
-                    {t.market.balance}: <span className="text-cyber-success text-base font-bold ml-1">${gameState.cash.toFixed(0)}</span>
+                 <div className="text-xs text-slate-400 font-mono bg-black/40 px-2.5 py-1 border border-slate-700">
+                    余额: <span className="text-cyber-success text-sm font-bold ml-1">${gameState.cash.toFixed(0)}</span>
                  </div>
                </div>
                
-               {/* Compact Hardware List */}
-               <div className="space-y-2">
+               {/* 紧凑四角布局 */}
+               <div className="space-y-1.5">
                   {HARDWARE_CATALOG.filter(h => h.isPurchasable !== false).map(hw => (
-                    <div key={hw.id} className="bg-cyber-panel/30 border border-slate-700/50 hover:border-cyber-primary/50 transition-all group relative">
-                       <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-cyber-success opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                   <div key={hw.id} className="bg-cyber-panel/20 border border-slate-700/50 hover:border-cyber-primary/50 transition-all group relative">
+                     <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-cyber-success opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                     
+                     <div className="p-2 grid grid-cols-2 gap-x-3 gap-y-1.5">
+                       {/* 左上角：地区 + 名称 */}
+                       <div className="flex items-center gap-1.5">
+                         <span className="px-1.5 py-0.5 bg-slate-800/80 text-white text-[9px] font-mono border border-slate-700 flex-shrink-0">
+                                        {getRegionFlag(hw.region)} {hw.region}
+                                    </span>
+                         <h3 
+                           className="text-xs font-bold text-white font-mono group-hover:text-cyber-primary leading-tight truncate"
+                           title={hw.name}
+                         >
+                           {hw.name}
+                         </h3>
+                                </div>
                        
-                       <div className="p-2.5 md:p-3">
-                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-2">
-                            {/* Left: Name & Region */}
-                            <div className="flex items-center gap-2 flex-1 min-w-0">
-                                <span className="px-1.5 py-0.5 bg-slate-800/80 text-white text-[9px] font-mono border border-slate-600/50 flex items-center gap-1 flex-shrink-0">
-                                    {getRegionFlag(hw.region)} {hw.region}
-                                </span>
-                                <h3 className="text-sm md:text-base font-bold text-white font-mono group-hover:text-cyber-primary truncate">{hw.name}</h3>
-                            </div>
-                            
-                            {/* Middle: Quick Tags & Specs */}
-                            <div className="flex items-center gap-2 md:gap-3 flex-wrap">
-                                <div className="flex gap-1.5 text-[9px] font-mono text-slate-400">
-                                    <span className="bg-black/60 px-1.5 py-0.5 border border-slate-800/50 flex items-center gap-0.5"><MonitorPlay size={8}/> {hw.networkRoute}</span>
-                                    <span className="bg-black/60 px-1.5 py-0.5 border border-slate-800/50 flex items-center gap-0.5"><Globe size={8}/> {hw.ipType}</span>
+                       {/* 右上角：价格 */}
+                       <div className="text-right font-mono">
+                         <span className="text-sm font-bold text-cyber-success">${hw.purchaseCost}</span>
+                         <span className="text-[9px] text-slate-500 ml-1.5">-${hw.dailyUpkeep}/天</span>
                                 </div>
-                                
-                                <div className="flex gap-2 text-[10px] font-mono">
-                                    <span className="text-cyber-primary flex items-center gap-0.5"><Cpu size={10}/> {hw.cpuCores}C</span>
-                                    <span className="text-cyber-secondary flex items-center gap-0.5"><Box size={10}/> {hw.ramGB}G</span>
-                                    <span className="text-cyber-warning flex items-center gap-0.5"><HardDrive size={10}/> {hw.diskGB}G</span>
-                                </div>
-                            </div>
-                            
-                            {/* Right: Price & Action */}
-                            <div className="flex items-center gap-3 md:gap-4 justify-between md:justify-end">
-                                <div className="text-left md:text-right">
-                                    <div className="text-base md:text-lg font-bold text-cyber-success font-mono">${hw.purchaseCost}</div>
-                                    <div className="text-[9px] text-slate-500">-${hw.dailyUpkeep}/天</div>
-                                </div>
+                       
+                       {/* 左下角：配置 + 网络信息 */}
+                       <div className="flex flex-wrap gap-1 items-center text-[9px] font-mono">
+                         <span className="text-cyber-primary flex items-center gap-0.5 bg-black/40 px-1.5 py-0.5 border border-slate-800/50">
+                           <Cpu size={9}/> {hw.cpuCores}C
+                         </span>
+                         <span className="text-cyber-secondary flex items-center gap-0.5 bg-black/40 px-1.5 py-0.5 border border-slate-800/50">
+                           <Box size={9}/> {hw.ramGB}G
+                         </span>
+                         <span className="text-cyber-warning flex items-center gap-0.5 bg-black/40 px-1.5 py-0.5 border border-slate-800/50">
+                           <HardDrive size={9}/> {hw.diskGB}G
+                         </span>
+                         <span className="text-slate-400 bg-black/40 px-1.5 py-0.5 border border-slate-800/50">
+                           {hw.networkRoute}
+                         </span>
+                         <span className="text-slate-400 bg-black/40 px-1.5 py-0.5 border border-slate-800/50">
+                           {hw.ipType}
+                         </span>
+                                    </div>
+                       
+                       {/* 右下角：购买按钮 */}
+                       <div className="flex items-center justify-end">
                                 <button 
                                 onClick={() => buyServer(hw)}
                                 disabled={gameState.cash < hw.purchaseCost}
-                                className={`px-3 py-1.5 font-bold font-mono uppercase text-[10px] transition-all border clip-btn flex-shrink-0 ${
+                           className={`px-3 py-1 font-bold font-mono uppercase text-[9px] transition-all border clip-btn ${
                                     gameState.cash >= hw.purchaseCost 
-                                    ? 'bg-cyber-primary text-cyber-black border-cyber-primary hover:bg-white hover:shadow-[0_0_10px_rgba(0,240,255,0.4)]' 
+                             ? 'bg-cyber-primary text-cyber-black border-cyber-primary hover:bg-white' 
                                     : 'bg-transparent text-slate-600 border-slate-800 cursor-not-allowed'
                                 }`}
                                 >
-                                {gameState.cash >= hw.purchaseCost ? '购买' : '余额不足'}
+                           {gameState.cash >= hw.purchaseCost ? '购买' : '无余额'}
                                 </button>
-                            </div>
                         </div>
                        </div>
                     </div>
@@ -913,16 +951,16 @@ export default function App() {
                    <div>
                       <h3 className="text-white font-bold font-mono uppercase flex items-center gap-2 tracking-wider text-sm md:text-base">
                           <Users size={16} className="text-cyber-primary"/> {t.plans.activeList}
-                      </h3>
+                   </h3>
                       <p className="text-[10px] text-slate-500 font-mono mt-0.5">{gameState.plans.length} 个产品在售</p>
-                   </div>
-                   <button 
+                       </div>
+                             <button 
                      onClick={() => setIsCreatePlanModalOpen(true)}
                      className="flex items-center gap-2 px-3 md:px-4 py-2 bg-cyber-success text-cyber-black font-bold font-mono uppercase hover:bg-emerald-300 transition-all text-xs clip-btn shadow-[0_0_10px_rgba(0,255,159,0.3)]"
-                   >
+                             >
                      <Plus size={14} /> 新产品
-                   </button>
-                </div>
+                             </button>
+                      </div>
 
                 {/* Compact Product List */}
                 <div className="space-y-1.5">
@@ -930,7 +968,7 @@ export default function App() {
                      <div className="bg-cyber-panel/20 border border-dashed border-slate-700 p-8 text-center">
                         <Users size={32} className="mx-auto mb-3 text-slate-600" />
                         <p className="text-slate-500 text-sm font-mono mb-4">暂无产品，点击上方按钮创建</p>
-                     </div>
+                         </div>
                    ) : (
                      gameState.plans.map(p => (
                       <div key={p.id} className="bg-cyber-panel/30 border border-slate-700/50 hover:border-slate-600 transition-all relative group">
@@ -944,26 +982,26 @@ export default function App() {
                                       {getRegionFlag(p.region)} {p.region}
                                   </span>
                                   <span className="text-[9px] bg-cyber-secondary/10 px-1.5 py-0.5 text-cyber-secondary border border-cyber-secondary/30">{p.level}</span>
-                               </div>
+                         </div>
                                <div className="font-bold text-white font-mono text-xs md:text-sm tracking-tight truncate">{p.name}</div>
-                            </div>
-                            
+                      </div>
+                      
                             {/* Middle: Specs in compact format */}
                             <div className="hidden md:flex items-center gap-3 text-[10px] text-slate-400 font-mono mx-4">
                                 <span className="flex items-center gap-1"><Cpu size={10} className="text-cyber-primary"/> {p.cpuCores}C</span>
                                 <span className="flex items-center gap-1"><Box size={10} className="text-cyber-secondary"/> {p.ramGB}G</span>
                                 <span className="flex items-center gap-1"><HardDrive size={10} className="text-cyber-warning"/> {p.diskGB}G</span>
-                            </div>
-                            
+                </div>
+
                             {/* Right: Price, Users, Actions */}
                             <div className="flex items-center gap-3 md:gap-4">
                                <div className="text-cyber-success font-mono font-bold text-sm border border-cyber-success/20 px-2 py-0.5 bg-cyber-success/5">
                                    ${p.priceMonthly}<span className="text-[9px] opacity-60">/m</span>
-                               </div>
+                            </div>
                                <div className="text-center min-w-[40px]">
                                   <div className="text-base md:text-lg font-bold text-white font-mono leading-none">{p.activeUsers}</div>
                                   <div className="text-[8px] text-slate-500 uppercase">{t.plans.users}</div>
-                               </div>
+                            </div>
                                <button 
                                  onClick={() => deletePlan(p.id)} 
                                  className="p-1.5 text-slate-600 hover:text-red-500 hover:bg-red-500/10 transition-all border border-transparent hover:border-red-500/30"
@@ -971,9 +1009,9 @@ export default function App() {
                                >
                                  <Trash2 size={14} />
                                </button>
-                            </div>
                          </div>
-                      </div>
+                            </div>
+                            </div>
                    )))}
                 </div>
              </div>
@@ -985,32 +1023,126 @@ export default function App() {
                
                {/* MENU VIEW */}
                {opsStep === 'menu' && (
-                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div onClick={() => setOpsStep('forum_select')} className="bg-cyber-panel/60 border border-slate-700 p-6 md:p-8 hover:border-cyber-primary cursor-pointer group relative overflow-hidden hover:-translate-y-1 transition-all shadow-lg clip-card">
-                       <div className="absolute top-0 left-0 w-1 bg-slate-800 group-hover:bg-cyber-primary transition-colors"></div>
-                       <div className="w-12 h-12 md:w-14 md:h-14 bg-black border border-slate-700 flex items-center justify-center mb-4 md:mb-6 group-hover:border-cyber-primary group-hover:shadow-[0_0_15px_rgba(0,240,255,0.3)] transition-all">
-                           <Megaphone className="text-slate-400 group-hover:text-cyber-primary transition-colors md:w-[28px] md:h-[28px]" size={24} />
+                 <>
+                   {/* Current Traffic Status */}
+                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
+                       <div className={`border p-3 clip-card transition-all ${
+                           gameState.marketingBoost > 3 ? 'bg-red-900/20 border-red-500/50' : 
+                           gameState.marketingBoost > 2 ? 'bg-yellow-900/20 border-yellow-500/50' : 
+                           gameState.marketingBoost > 1.5 ? 'bg-cyan-900/20 border-cyan-500/50' : 
+                           'bg-slate-900/20 border-slate-700'
+                       }`}>
+                           <div className="flex items-center justify-between">
+                               <div>
+                                   <div className="text-[10px] text-slate-400 uppercase tracking-wider mb-1">当前流量倍数</div>
+                                   <div className={`text-2xl md:text-3xl font-bold font-mono ${
+                                       gameState.marketingBoost > 3 ? 'text-red-400' : 
+                                       gameState.marketingBoost > 2 ? 'text-yellow-400' : 
+                                       gameState.marketingBoost > 1.5 ? 'text-cyan-400' : 
+                                       'text-slate-400'
+                                   }`}>
+                                       {gameState.marketingBoost.toFixed(1)}x
+                                   </div>
+                                   <div className="text-[9px] text-slate-500 font-mono mt-0.5">
+                                       {gameState.marketingBoost > 1 ? `每天衰减 -0.05x` : '基础流量'}
+                                   </div>
+                               </div>
+                               <div className={`p-3 rounded-full ${
+                                   gameState.marketingBoost > 3 ? 'bg-red-500/20' : 
+                                   gameState.marketingBoost > 2 ? 'bg-yellow-500/20' : 
+                                   gameState.marketingBoost > 1.5 ? 'bg-cyan-500/20' : 
+                                   'bg-slate-800'
+                               }`}>
+                                   <TrendingUp size={24} className={
+                                       gameState.marketingBoost > 3 ? 'text-red-400' : 
+                                       gameState.marketingBoost > 2 ? 'text-yellow-400' : 
+                                       gameState.marketingBoost > 1.5 ? 'text-cyan-400' : 
+                                       'text-slate-500'
+                                   } />
+                               </div>
+                           </div>
                        </div>
-                       <h3 className="text-white font-bold font-mono mb-2 text-base md:text-lg">{t.ops.forumTitle}</h3>
-                       <p className="text-xs text-slate-400 leading-relaxed">{t.ops.forumDesc}</p>
-                    </div>
-                    <div onClick={() => setOpsStep('ad_select')} className="bg-cyber-panel/60 border border-slate-700 p-6 md:p-8 hover:border-cyber-warning cursor-pointer group relative overflow-hidden hover:-translate-y-1 transition-all shadow-lg clip-card">
-                       <div className="absolute top-0 left-0 w-1 bg-slate-800 group-hover:bg-cyber-warning transition-colors"></div>
-                       <div className="w-12 h-12 md:w-14 md:h-14 bg-black border border-slate-700 flex items-center justify-center mb-4 md:mb-6 group-hover:border-cyber-warning group-hover:shadow-[0_0_15px_rgba(252,238,10,0.3)] transition-all">
-                           <TrendingUp className="text-slate-400 group-hover:text-cyber-warning transition-colors md:w-[28px] md:h-[28px]" size={24} />
+                       
+                       <div className="bg-gradient-to-r from-cyber-primary/10 to-cyber-warning/10 border border-cyber-primary/30 p-3 clip-card">
+                           <div className="flex items-start gap-2">
+                               <div className="p-1 bg-cyber-primary/20 border border-cyber-primary/50 mt-0.5">
+                                   <Shield size={14} className="text-cyber-primary" />
+                               </div>
+                               <div className="flex-1">
+                                   <h4 className="text-cyber-primary font-bold font-mono text-[10px] mb-1">💡 营销提示</h4>
+                                   <div className="text-[9px] text-slate-300 font-mono leading-tight">
+                                       流量倍数影响新用户获取速度。倍数越高，订阅转化率越快！
+                                   </div>
+                               </div>
+                           </div>
                        </div>
-                       <h3 className="text-white font-bold font-mono mb-2 text-base md:text-lg">{t.ops.adsTitle}</h3>
-                       <p className="text-xs text-slate-400 leading-relaxed">{t.ops.adsDesc}</p>
-                    </div>
-                    <div onClick={() => setOpsStep('kol_select')} className="bg-cyber-panel/60 border border-slate-700 p-6 md:p-8 hover:border-cyber-danger cursor-pointer group relative overflow-hidden hover:-translate-y-1 transition-all shadow-lg clip-card">
-                       <div className="absolute top-0 left-0 w-1 bg-slate-800 group-hover:bg-cyber-danger transition-colors"></div>
-                       <div className="w-12 h-12 md:w-14 md:h-14 bg-black border border-slate-700 flex items-center justify-center mb-4 md:mb-6 group-hover:border-cyber-danger group-hover:shadow-[0_0_15px_rgba(255,0,60,0.3)] transition-all">
-                           <Zap className="text-slate-400 group-hover:text-cyber-danger transition-colors md:w-[28px] md:h-[28px]" size={24} />
+                   </div>
+                   
+                   {/* Marketing Tips Card */}
+                   <div className="bg-gradient-to-r from-slate-900/60 to-slate-800/60 border border-slate-700 p-3 mb-4 clip-card">
+                       <div className="flex items-start gap-3">
+                           <div className="p-1.5 bg-slate-800 border border-slate-700 mt-0.5">
+                               <TrendingUp size={16} className="text-slate-400" />
+                           </div>
+                           <div className="flex-1">
+                               <h4 className="text-white font-bold font-mono text-xs mb-1">📊 营销策略对比</h4>
+                               <div className="text-[10px] text-slate-300 font-mono space-y-0.5">
+                                   <p>• <span className="text-green-400">论坛营销</span>: 免费但有风险（DDOS/封号），适合早期推广</p>
+                                   <p>• <span className="text-yellow-400">广告投放</span>: 稳定付费流量，中等ROI，适合稳定增长</p>
+                                   <p>• <span className="text-red-400">KOL合作</span>: 高成本高回报，可提升/降低品牌名声</p>
+                               </div>
+                           </div>
                        </div>
-                       <h3 className="text-white font-bold font-mono mb-2 text-base md:text-lg">{t.ops.kolTitle}</h3>
-                       <p className="text-xs text-slate-400 leading-relaxed">{t.ops.kolDesc}</p>
-                    </div>
-                 </div>
+                   </div>
+                   
+                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div onClick={() => setOpsStep('forum_select')} className="bg-cyber-panel/60 border border-slate-700 p-5 md:p-6 hover:border-cyber-primary cursor-pointer group relative overflow-hidden hover:-translate-y-1 transition-all shadow-lg clip-card">
+                         <div className="absolute top-0 left-0 w-1 bg-slate-800 group-hover:bg-cyber-primary transition-colors"></div>
+                         <div className="flex justify-between items-start mb-3">
+                             <div className="w-10 h-10 md:w-12 md:h-12 bg-black border border-slate-700 flex items-center justify-center group-hover:border-cyber-primary group-hover:shadow-[0_0_15px_rgba(0,240,255,0.3)] transition-all">
+                                 <Megaphone className="text-slate-400 group-hover:text-cyber-primary transition-colors" size={20} />
+                             </div>
+                             <span className="px-2 py-0.5 bg-green-400/20 text-green-400 text-[9px] font-mono border border-green-400/30">免费</span>
+                         </div>
+                         <h3 className="text-white font-bold font-mono mb-1.5 text-sm md:text-base">{t.ops.forumTitle}</h3>
+                         <p className="text-[10px] text-slate-400 leading-relaxed mb-2">{t.ops.forumDesc}</p>
+                         <div className="flex gap-2 text-[9px] font-mono">
+                             <span className="px-1.5 py-0.5 bg-black/40 text-slate-400 border border-slate-800">高风险</span>
+                             <span className="px-1.5 py-0.5 bg-black/40 text-green-400 border border-slate-800">高质量</span>
+                         </div>
+                      </div>
+                      <div onClick={() => setOpsStep('ad_select')} className="bg-cyber-panel/60 border border-slate-700 p-5 md:p-6 hover:border-cyber-warning cursor-pointer group relative overflow-hidden hover:-translate-y-1 transition-all shadow-lg clip-card">
+                         <div className="absolute top-0 left-0 w-1 bg-slate-800 group-hover:bg-cyber-warning transition-colors"></div>
+                         <div className="flex justify-between items-start mb-3">
+                             <div className="w-10 h-10 md:w-12 md:h-12 bg-black border border-slate-700 flex items-center justify-center group-hover:border-cyber-warning group-hover:shadow-[0_0_15px_rgba(252,238,10,0.3)] transition-all">
+                                 <TrendingUp className="text-slate-400 group-hover:text-cyber-warning transition-colors" size={20} />
+                             </div>
+                             <span className="px-2 py-0.5 bg-yellow-400/20 text-yellow-400 text-[9px] font-mono border border-yellow-400/30">付费</span>
+                         </div>
+                         <h3 className="text-white font-bold font-mono mb-1.5 text-sm md:text-base">{t.ops.adsTitle}</h3>
+                         <p className="text-[10px] text-slate-400 leading-relaxed mb-2">{t.ops.adsDesc}</p>
+                         <div className="flex gap-2 text-[9px] font-mono">
+                             <span className="px-1.5 py-0.5 bg-black/40 text-slate-400 border border-slate-800">稳定</span>
+                             <span className="px-1.5 py-0.5 bg-black/40 text-yellow-400 border border-slate-800">中等ROI</span>
+                         </div>
+                      </div>
+                      <div onClick={() => setOpsStep('kol_select')} className="bg-cyber-panel/60 border border-slate-700 p-5 md:p-6 hover:border-cyber-danger cursor-pointer group relative overflow-hidden hover:-translate-y-1 transition-all shadow-lg clip-card">
+                         <div className="absolute top-0 left-0 w-1 bg-slate-800 group-hover:bg-cyber-danger transition-colors"></div>
+                         <div className="flex justify-between items-start mb-3">
+                             <div className="w-10 h-10 md:w-12 md:h-12 bg-black border border-slate-700 flex items-center justify-center group-hover:border-cyber-danger group-hover:shadow-[0_0_15px_rgba(255,0,60,0.3)] transition-all">
+                                 <Zap className="text-slate-400 group-hover:text-cyber-danger transition-colors" size={20} />
+                             </div>
+                             <span className="px-2 py-0.5 bg-red-400/20 text-red-400 text-[9px] font-mono border border-red-400/30">高投入</span>
+                         </div>
+                         <h3 className="text-white font-bold font-mono mb-1.5 text-sm md:text-base">{t.ops.kolTitle}</h3>
+                         <p className="text-[10px] text-slate-400 leading-relaxed mb-2">{t.ops.kolDesc}</p>
+                         <div className="flex gap-2 text-[9px] font-mono">
+                             <span className="px-1.5 py-0.5 bg-black/40 text-slate-400 border border-slate-800">品牌效应</span>
+                             <span className="px-1.5 py-0.5 bg-black/40 text-red-400 border border-slate-800">高ROI</span>
+                         </div>
+                      </div>
+                   </div>
+                 </>
                )}
 
                {/* ... Sub menus logic remains similar, just check responsiveness of inner grids ... */}
@@ -1033,15 +1165,42 @@ export default function App() {
                        <div className="space-y-3">
                           <p className="text-xs text-cyber-primary font-mono uppercase tracking-widest mb-2">{t.ops.selectTarget}:</p>
                           <div className="grid grid-cols-1 gap-3">
-                             {FORUMS.map(f => (
-                                <div key={f.id} onClick={() => setSelectedForumId(f.id)} className="bg-black/40 border border-slate-700 p-4 md:p-5 hover:border-cyber-primary cursor-pointer flex justify-between items-center transition-all hover:bg-slate-900 group clip-card">
+                             {FORUMS.map(f => {
+                               const riskLevel = f.risk < 0.3 ? '低风险' : f.risk < 0.6 ? '中风险' : '高风险';
+                               const riskColor = f.risk < 0.3 ? 'text-green-400' : f.risk < 0.6 ? 'text-yellow-400' : 'text-red-400';
+                               const qualityStars = '★'.repeat(Math.floor(f.userQuality * 5));
+                               const expectedROI = (f.trafficPotential * f.userQuality * 8).toFixed(0);
+                               
+                               return (
+                                <div key={f.id} onClick={() => setSelectedForumId(f.id)} className="bg-black/40 border border-slate-700 p-3 md:p-4 hover:border-cyber-primary cursor-pointer transition-all hover:bg-slate-900 group clip-card">
+                                   <div className="flex justify-between items-start mb-2">
                                    <div>
-                                       <span className="font-bold text-white text-lg md:text-xl block mb-1 group-hover:text-cyber-primary transition-colors">{f.name}</span>
-                                       <span className="text-[10px] md:text-xs text-slate-500 font-mono">Risk: <span className="text-red-400">{(f.risk * 100).toFixed(0)}%</span> | Traffic: <span className="text-cyber-success">{f.trafficPotential}</span></span>
+                                           <span className="font-bold text-white text-base md:text-lg block mb-1 group-hover:text-cyber-primary transition-colors">{f.name}</span>
+                                           <div className="flex gap-2 text-[10px] font-mono text-slate-400 mb-1">
+                                               <span className={riskColor}>{riskLevel}</span>
+                                               <span className="text-slate-600">|</span>
+                                               <span className="text-amber-400">{qualityStars}</span>
                                    </div>
-                                   <span className="text-slate-600 font-mono text-[10px] md:text-xs group-hover:text-cyber-primary transition-colors group-hover:translate-x-2 transform duration-300">INITIATE &gt;</span>
                                 </div>
-                             ))}
+                                       <span className="text-slate-600 font-mono text-[10px] md:text-xs group-hover:text-cyber-primary transition-colors">免费 &gt;</span>
+                                   </div>
+                                   <div className="grid grid-cols-3 gap-2 text-[10px] font-mono bg-black/40 border border-slate-800/50 p-2">
+                                       <div className="text-center">
+                                           <div className="text-slate-500">流量潜力</div>
+                                           <div className="text-cyber-success font-bold text-sm">+{f.trafficPotential}</div>
+                                       </div>
+                                       <div className="text-center border-x border-slate-800">
+                                           <div className="text-slate-500">用户质量</div>
+                                           <div className="text-white font-bold text-sm">{(f.userQuality * 100).toFixed(0)}%</div>
+                                       </div>
+                                       <div className="text-center">
+                                           <div className="text-slate-500">预期ROI</div>
+                                           <div className="text-cyber-primary font-bold text-sm">${expectedROI}</div>
+                                       </div>
+                                   </div>
+                                </div>
+                               );
+                             })}
                           </div>
                        </div>
                     ) : (
@@ -1095,15 +1254,41 @@ export default function App() {
                         <div className="w-10 md:w-20"></div>
                     </div>
                     <div className="grid grid-cols-1 gap-3">
-                       {ADS.map(ad => (
-                          <div key={ad.id} onClick={() => handleBuyAd(ad.id)} className="bg-black/40 border border-slate-700 p-4 md:p-5 hover:border-cyber-warning cursor-pointer flex justify-between items-center group transition-transform hover:translate-x-1 clip-card">
-                             <div>
-                                <div className="font-bold text-white text-base md:text-lg group-hover:text-cyber-warning transition-colors">{ad.name}</div>
-                                <div className="text-[10px] md:text-xs text-slate-500 font-mono">Traffic Boost: <span className="text-white">{ad.trafficBoost}x</span></div>
+                       {ADS.map(ad => {
+                         const roi = (ad.trafficBoost * 20 - ad.cost).toFixed(0);
+                         const efficiency = (ad.trafficBoost / ad.cost * 100).toFixed(1);
+                         const cpValue = ad.cost / ad.trafficBoost;
+                         const cpRating = cpValue < 100 ? '优秀' : cpValue < 150 ? '良好' : '一般';
+                         const cpColor = cpValue < 100 ? 'text-green-400' : cpValue < 150 ? 'text-yellow-400' : 'text-slate-400';
+                         
+                         return (
+                          <div key={ad.id} onClick={() => handleBuyAd(ad.id)} className={`bg-black/40 border border-slate-700 p-3 md:p-4 hover:border-cyber-warning cursor-pointer group transition-all hover:translate-x-1 clip-card ${gameState.cash < ad.cost ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                             <div className="flex justify-between items-start mb-2">
+                                <div>
+                                   <div className="font-bold text-white text-base md:text-lg group-hover:text-cyber-warning transition-colors">{ad.name}</div>
+                                   <div className="text-[10px] font-mono text-slate-400 mt-0.5">
+                                       <span className={cpColor}>性价比: {cpRating}</span>
+                                   </div>
+                                </div>
+                                <div className="font-mono text-cyber-warning font-bold text-lg md:text-xl border border-cyber-warning/30 px-3 py-1 bg-cyber-warning/5 clip-slope">${ad.cost}</div>
                              </div>
-                             <div className="font-mono text-cyber-warning font-bold text-lg md:text-xl border border-cyber-warning/30 px-3 py-1 bg-cyber-warning/5 clip-slope">${ad.cost}</div>
+                             <div className="grid grid-cols-3 gap-2 text-[10px] font-mono bg-black/40 border border-slate-800/50 p-2">
+                                 <div className="text-center">
+                                     <div className="text-slate-500">流量增幅</div>
+                                     <div className="text-cyber-success font-bold text-sm">+{ad.trafficBoost}x</div>
+                                 </div>
+                                 <div className="text-center border-x border-slate-800">
+                                     <div className="text-slate-500">转化率</div>
+                                     <div className="text-white font-bold text-sm">{efficiency}%</div>
+                                 </div>
+                                 <div className="text-center">
+                                     <div className="text-slate-500">预期ROI</div>
+                                     <div className={`font-bold text-sm ${Number(roi) > 0 ? 'text-green-400' : 'text-red-400'}`}>${roi}</div>
+                                 </div>
+                             </div>
                           </div>
-                       ))}
+                         );
+                       })}
                     </div>
                  </div>
                )}
@@ -1118,15 +1303,47 @@ export default function App() {
                         <div className="w-10 md:w-20"></div>
                     </div>
                     <div className="grid grid-cols-1 gap-3">
-                       {KOLS.map(kol => (
-                          <div key={kol.id} onClick={() => handleHireKol(kol.id)} className="bg-black/40 border border-slate-700 p-4 md:p-5 hover:border-cyber-danger cursor-pointer flex justify-between items-center group transition-transform hover:translate-x-1 clip-card">
-                             <div>
-                                <div className="font-bold text-white text-base md:text-lg group-hover:text-cyber-danger transition-colors">{kol.name}</div>
-                                <div className="text-[10px] md:text-xs text-slate-500 font-mono">Reputation Impact: <span className={kol.reputationImpact > 0 ? 'text-green-400' : 'text-red-400'}>{kol.reputationImpact > 0 ? '+' : ''}{kol.reputationImpact}</span></div>
+                       {KOLS.map(kol => {
+                         const trafficValue = kol.trafficBoost * 20;
+                         const repValue = kol.reputationImpact * 5;
+                         const totalValue = trafficValue + repValue;
+                         const roi = (totalValue - kol.cost).toFixed(0);
+                         const efficiency = (totalValue / kol.cost * 100).toFixed(0);
+                         const cpRating = Number(efficiency) > 80 ? '超值' : Number(efficiency) > 60 ? '优秀' : Number(efficiency) > 40 ? '良好' : '一般';
+                         const cpColor = Number(efficiency) > 80 ? 'text-green-400' : Number(efficiency) > 60 ? 'text-cyan-400' : Number(efficiency) > 40 ? 'text-yellow-400' : 'text-slate-400';
+                         
+                         return (
+                          <div key={kol.id} onClick={() => handleHireKol(kol.id)} className={`bg-black/40 border border-slate-700 p-3 md:p-4 hover:border-cyber-danger cursor-pointer group transition-all hover:translate-x-1 clip-card ${gameState.cash < kol.cost ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                             <div className="flex justify-between items-start mb-2">
+                                <div>
+                                   <div className="font-bold text-white text-base md:text-lg group-hover:text-cyber-danger transition-colors">{kol.name}</div>
+                                   <div className="text-[10px] font-mono mt-0.5">
+                                       <span className={cpColor}>综合评价: {cpRating}</span>
+                                       <span className="text-slate-600 mx-1">|</span>
+                                       <span className={kol.reputationImpact > 0 ? 'text-green-400' : 'text-red-400'}>
+                                           名声 {kol.reputationImpact > 0 ? '+' : ''}{kol.reputationImpact}
+                                       </span>
+                                   </div>
+                                </div>
+                                <div className="font-mono text-cyber-danger font-bold text-lg md:text-xl border border-cyber-danger/30 px-3 py-1 bg-cyber-danger/5 clip-slope">${kol.cost}</div>
                              </div>
-                             <div className="font-mono text-cyber-danger font-bold text-lg md:text-xl border border-cyber-danger/30 px-3 py-1 bg-cyber-danger/5 clip-slope">${kol.cost}</div>
+                             <div className="grid grid-cols-3 gap-2 text-[10px] font-mono bg-black/40 border border-slate-800/50 p-2">
+                                 <div className="text-center">
+                                     <div className="text-slate-500">流量增幅</div>
+                                     <div className="text-cyber-success font-bold text-sm">+{kol.trafficBoost}x</div>
+                                 </div>
+                                 <div className="text-center border-x border-slate-800">
+                                     <div className="text-slate-500">转化率</div>
+                                     <div className="text-white font-bold text-sm">{efficiency}%</div>
+                                 </div>
+                                 <div className="text-center">
+                                     <div className="text-slate-500">预期ROI</div>
+                                     <div className={`font-bold text-sm ${Number(roi) > 0 ? 'text-green-400' : 'text-red-400'}`}>${roi}</div>
+                                 </div>
+                             </div>
                           </div>
-                       ))}
+                         );
+                       })}
                     </div>
                  </div>
                )}
@@ -1152,60 +1369,89 @@ export default function App() {
 
           {/* ACHIEVEMENTS TAB */}
           {activeTab === 'achievements' && (
-            <div className="space-y-6 animate-fade-in">
-                <div className="bg-cyber-panel/40 backdrop-blur border border-slate-800 p-4 md:p-8 mb-6 relative overflow-hidden clip-card">
-                    <div className="absolute top-0 left-0 w-32 h-32 bg-cyber-warning/5 rounded-full blur-3xl -translate-x-1/2 -translate-y-1/2"></div>
-                    <div className="flex items-center gap-4 md:gap-6 relative z-10">
-                        <div className="p-3 md:p-4 bg-black border border-cyber-warning/30 rounded-full shadow-[0_0_15px_rgba(252,238,10,0.2)]">
-                            <Award size={32} className="md:w-[40px] md:h-[40px] text-cyber-warning" />
+            <div className="space-y-3 animate-fade-in">
+                {/* Compact Header */}
+                <div className="bg-cyber-panel/40 backdrop-blur border border-slate-700 p-3 relative overflow-hidden clip-card">
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                            <div className="p-2 bg-black/60 border border-cyber-warning/30">
+                                <Award size={20} className="text-cyber-warning" />
                         </div>
                         <div>
-                            <h2 className="text-xl md:text-3xl font-bold text-white font-mono uppercase tracking-tight">{t.achievements.title}</h2>
-                            <p className="text-slate-400 text-xs md:text-sm font-mono mt-1 border-l-2 border-slate-700 pl-3">{t.achievements.desc}</p>
+                                <h2 className="text-base md:text-lg font-bold text-white font-mono uppercase">{t.achievements.title}</h2>
+                                <p className="text-[10px] text-slate-500 font-mono">{gameState.milestones.filter(m => m.achieved).length} / {gameState.milestones.length} 已解锁</p>
+                            </div>
                         </div>
                     </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Compact Grid - 3 columns on large screens */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
                     {gameState.milestones.map(m => (
-                        <div key={m.id} className={`relative group overflow-hidden border transition-all duration-500 p-4 md:p-6 clip-card ${
+                        <div key={m.id} className={`relative group overflow-hidden border transition-all duration-300 p-2.5 ${
                             m.achieved 
-                            ? 'bg-cyber-panel border-cyber-warning shadow-[0_0_15px_rgba(252,238,10,0.1)]' 
-                            : 'bg-black/40 border-slate-800 opacity-80'
+                            ? 'bg-cyber-panel/50 border-cyber-warning/50 shadow-[0_0_10px_rgba(252,238,10,0.08)]' 
+                            : 'bg-black/30 border-slate-800/50 opacity-70'
                         }`}>
-                            {/* Diagonal Cut Overlay */}
-                            <div className="absolute top-0 right-0 w-16 h-16 bg-white/5 transform rotate-45 translate-x-8 -translate-y-8"></div>
+                            {/* Status Indicator */}
+                            <div className={`absolute top-0 left-0 w-full h-0.5 ${m.achieved ? 'bg-cyber-warning' : 'bg-slate-800'}`}></div>
 
-                            <div className="flex justify-between items-start h-full relative z-10">
-                                <div className="flex flex-col justify-between h-full gap-4">
-                                    <div>
-                                        <h3 className={`font-bold font-mono text-sm md:text-lg mb-2 flex items-center gap-2 uppercase ${m.achieved ? 'text-white' : 'text-slate-500'}`}>
+                            <div className="flex items-start justify-between gap-2 relative z-10">
+                                <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-2 mb-1">
+                                        {m.achieved ? (
+                                            <CheckCircle className="text-cyber-warning flex-shrink-0" size={14} />
+                                        ) : (
+                                            <div className="w-3.5 h-3.5 rounded-full border border-slate-700 border-dashed flex-shrink-0"></div>
+                                        )}
+                                        <h3 className={`font-bold font-mono text-xs uppercase leading-tight ${m.achieved ? 'text-white' : 'text-slate-500'}`}>
                                             {m.name} 
                                         </h3>
-                                        <p className="text-xs text-slate-400 font-mono leading-relaxed">{m.description}</p>
                                     </div>
+                                    <p className="text-[10px] text-slate-400 font-mono leading-snug mb-2 pl-5">{m.description}</p>
                                     
-                                    <div className="mt-auto pt-4">
-                                        <span className={`px-2 py-0.5 md:px-3 md:py-1 text-[9px] md:text-[10px] font-mono uppercase border tracking-widest ${
+                                    <div className="flex items-center justify-between pl-5">
+                                        <span className={`px-1.5 py-0.5 text-[8px] font-mono uppercase border ${
                                             m.achieved 
-                                            ? 'bg-cyber-warning/20 text-cyber-warning border-cyber-warning' 
-                                            : 'bg-slate-900 text-slate-600 border-slate-800'
+                                            ? 'bg-cyber-warning/20 text-cyber-warning border-cyber-warning/40' 
+                                            : 'bg-slate-900/50 text-slate-600 border-slate-800/50'
                                         }`}>
-                                            {m.achieved ? t.achievements.unlocked : t.achievements.locked}
+                                            {m.achieved ? '✓' : '○'}
                                         </span>
+                                        <div className="text-right">
+                                            <div className="text-[8px] text-slate-500 uppercase">奖励</div>
+                                            <div className={`font-mono text-sm font-bold ${m.achieved ? 'text-cyber-warning' : 'text-slate-700'}`}>
+                                                ${m.rewardCash}
                                     </div>
                                 </div>
-                                
-                                <div className="text-right flex flex-col items-end">
-                                    {m.achieved ? <CheckCircle className="text-cyber-warning mb-2" size={20} /> : <div className="w-5 h-5 md:w-6 md:h-6 rounded-full border-2 border-slate-700 border-dashed mb-2"></div>}
-                                    <div className="text-[8px] md:text-[9px] text-slate-500 uppercase tracking-wider mb-1">{t.achievements.reward}</div>
-                                    <div className={`font-mono text-lg md:text-2xl font-bold ${m.achieved ? 'text-cyber-warning drop-shadow-[0_0_5px_rgba(252,238,10,0.5)]' : 'text-slate-700'}`}>
-                                        ${m.rewardCash}
                                     </div>
                                 </div>
                             </div>
                         </div>
                     ))}
+                </div>
+
+                {/* Progress Summary */}
+                <div className="bg-cyber-panel/30 border border-slate-700/50 p-3 mt-4">
+                    <div className="flex items-center justify-between mb-2">
+                        <span className="text-xs text-slate-400 font-mono">完成进度</span>
+                        <span className="text-xs text-white font-mono font-bold">
+                            {((gameState.milestones.filter(m => m.achieved).length / gameState.milestones.length) * 100).toFixed(0)}%
+                        </span>
+                    </div>
+                    <div className="w-full bg-slate-900 h-2 overflow-hidden relative">
+                        <div 
+                            className="h-full bg-gradient-to-r from-cyber-warning to-cyber-success transition-all duration-1000"
+                            style={{width: `${(gameState.milestones.filter(m => m.achieved).length / gameState.milestones.length) * 100}%`}}
+                        ></div>
+                    </div>
+                    <div className="mt-2 text-center">
+                        <span className="text-[10px] text-slate-500 font-mono">
+                            总奖励: <span className="text-cyber-warning font-bold">
+                                ${gameState.milestones.filter(m => m.achieved).reduce((sum, m) => sum + m.rewardCash, 0)}
+                            </span>
+                        </span>
+                    </div>
                 </div>
             </div>
           )}
@@ -1342,6 +1588,6 @@ export default function App() {
           </div>
         </div>
       </Modal>
-   </div>
+    </div>
   );
 }

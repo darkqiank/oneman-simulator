@@ -181,6 +181,16 @@
          mask-image: none;
          opacity: 0.2;
       }
+
+      /* 强制页面从顶部开始 */
+      html, body {
+        scroll-behavior: auto !important;
+      }
+      
+      html {
+        overflow-y: scroll;
+        overflow-x: hidden;
+      }
     </style>
   <script type="importmap">
 {
@@ -193,16 +203,40 @@
 }
 </script>
 <script>
-  // 确保页面刷新时滚动到顶部
+  // 立即滚动到顶部（在任何内容渲染前）
+  document.documentElement.scrollTop = 0;
+  document.body.scrollTop = 0;
+  
+  // 禁用浏览器的滚动恢复
   if ('scrollRestoration' in history) {
     history.scrollRestoration = 'manual';
   }
-  window.addEventListener('beforeunload', function() {
-    window.scrollTo(0, 0);
-  });
-  window.addEventListener('load', function() {
-    window.scrollTo(0, 0);
-  });
+  
+  // 在 DOM 加载前就滚动到顶部
+  (function() {
+    var scrollToTop = function() {
+      window.scrollTo(0, 0);
+      document.documentElement.scrollTop = 0;
+      document.body.scrollTop = 0;
+    };
+    
+    // 立即执行
+    scrollToTop();
+    
+    // DOMContentLoaded 时执行
+    document.addEventListener('DOMContentLoaded', scrollToTop);
+    
+    // load 事件时执行
+    window.addEventListener('load', scrollToTop);
+    
+    // beforeunload 时执行
+    window.addEventListener('beforeunload', scrollToTop);
+    
+    // 使用 requestAnimationFrame 确保在渲染前执行
+    if (window.requestAnimationFrame) {
+      requestAnimationFrame(scrollToTop);
+    }
+  })();
 </script>
 </head>
   <body>
