@@ -24,6 +24,7 @@ import { Terminal } from './components/Terminal';
 import { LiveFeed } from './components/LiveFeed';
 import { TicketCenter } from './components/TicketCenter';
 import { ResearchLab } from './components/ResearchLab';
+import { Modal } from './components/Modal';
 
 const DEFAULT_GAME_STATE: GameState = {
   day: 1,
@@ -112,6 +113,11 @@ export default function App() {
 
   const t = TRANSLATIONS[gameState.language];
 
+  // 确保页面加载时滚动到顶部
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
+
   // Auto-save Effect
   useEffect(() => {
     try {
@@ -161,6 +167,9 @@ export default function App() {
   const [opsStep, setOpsStep] = useState<'menu' | 'forum_select' | 'ad_select' | 'kol_select'>('menu');
   const [selectedForumId, setSelectedForumId] = useState<string | null>(null);
   const [showThemeMenu, setShowThemeMenu] = useState(false);
+  
+  // Modal state
+  const [isCreatePlanModalOpen, setIsCreatePlanModalOpen] = useState(false);
 
   const tickRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -427,6 +436,10 @@ export default function App() {
     };
     setGameState(prev => ({ ...prev, plans: [...prev.plans, plan] }));
     addEvent(gameState.language === 'zh' ? `新产品上线: ${plan.name}` : `New Plan: ${plan.name}`, 'info');
+    
+    // 关闭 modal 并重置表单
+    setIsCreatePlanModalOpen(false);
+    setNewPlan({ name: '', cpu: 1, ram: 1, disk: 20, bandwidth: 100, price: 0, nodeId: '', level: 'Intro' });
   };
 
   const deletePlan = (id: string) => {
@@ -823,68 +836,65 @@ export default function App() {
 
           {/* MARKET TAB */}
           {activeTab === 'market' && (
-             <div className="space-y-4 animate-fade-in">
-               <div className="flex justify-between items-center mb-2 bg-cyber-panel/50 p-3 md:p-4 border-l-4 border-cyber-success">
-                 <h2 className="text-lg md:text-xl font-bold font-mono text-white flex items-center gap-2">
-                     <ShoppingCart className="text-cyber-success" size={20} /> {t.market.title}
-                 </h2>
-                 <div className="text-xs md:text-sm text-slate-400 font-mono bg-black/40 px-2 md:px-4 py-1 md:py-2 border border-slate-700 rounded-sm">
-                    {t.market.balance}: <span className="text-cyber-success text-base md:text-xl font-bold ml-1 md:ml-2">${gameState.cash.toFixed(0)}</span>
+             <div className="space-y-3 animate-fade-in">
+               <div className="flex justify-between items-center bg-cyber-panel/40 p-3 border-l-4 border-cyber-success clip-card">
+                 <div>
+                   <h2 className="text-base md:text-lg font-bold font-mono text-white flex items-center gap-2">
+                       <ShoppingCart className="text-cyber-success" size={18} /> {t.market.title}
+                   </h2>
+                   <p className="text-[10px] text-slate-500 font-mono mt-0.5">{HARDWARE_CATALOG.filter(h => h.isPurchasable !== false).length} 款可选</p>
+                 </div>
+                 <div className="text-xs text-slate-400 font-mono bg-black/40 px-3 py-1.5 border border-slate-700">
+                    {t.market.balance}: <span className="text-cyber-success text-base font-bold ml-1">${gameState.cash.toFixed(0)}</span>
                  </div>
                </div>
                
-               {/* 2 Columns on mobile for Market? No, 1 is better for details, but compact. */}
-               <div className="grid grid-cols-1 lg:grid-cols-1 gap-4">
+               {/* Compact Hardware List */}
+               <div className="space-y-2">
                   {HARDWARE_CATALOG.filter(h => h.isPurchasable !== false).map(hw => (
-                    <div key={hw.id} className="bg-cyber-panel/40 backdrop-blur border border-slate-700 p-0 hover:border-cyber-primary transition-all group relative overflow-hidden shadow-lg clip-card">
-                       <div className="absolute right-0 top-0 bottom-0 w-1 bg-slate-800 group-hover:bg-cyber-primary transition-colors"></div>
-                       <div className="p-3 md:p-5 relative z-10">
-                        <div className="flex flex-col md:flex-row justify-between md:items-start gap-3 md:gap-4">
-                            <div className="flex-1">
-                                <div className="flex items-center gap-2 mb-2">
-                                    <span className="px-2 py-0.5 bg-slate-800 text-white text-[10px] md:text-xs font-mono border border-slate-600 flex items-center gap-1">
-                                        {getRegionFlag(hw.region)} {hw.region}
-                                    </span>
-                                    <h3 className="text-lg md:text-xl font-bold text-white font-mono group-hover:text-cyber-primary truncate">{getRegionFlag(hw.region)} {hw.name}</h3>
+                    <div key={hw.id} className="bg-cyber-panel/30 border border-slate-700/50 hover:border-cyber-primary/50 transition-all group relative">
+                       <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-cyber-success opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                       
+                       <div className="p-2.5 md:p-3">
+                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-2">
+                            {/* Left: Name & Region */}
+                            <div className="flex items-center gap-2 flex-1 min-w-0">
+                                <span className="px-1.5 py-0.5 bg-slate-800/80 text-white text-[9px] font-mono border border-slate-600/50 flex items-center gap-1 flex-shrink-0">
+                                    {getRegionFlag(hw.region)} {hw.region}
+                                </span>
+                                <h3 className="text-sm md:text-base font-bold text-white font-mono group-hover:text-cyber-primary truncate">{hw.name}</h3>
+                            </div>
+                            
+                            {/* Middle: Quick Tags & Specs */}
+                            <div className="flex items-center gap-2 md:gap-3 flex-wrap">
+                                <div className="flex gap-1.5 text-[9px] font-mono text-slate-400">
+                                    <span className="bg-black/60 px-1.5 py-0.5 border border-slate-800/50 flex items-center gap-0.5"><MonitorPlay size={8}/> {hw.networkRoute}</span>
+                                    <span className="bg-black/60 px-1.5 py-0.5 border border-slate-800/50 flex items-center gap-0.5"><Globe size={8}/> {hw.ipType}</span>
                                 </div>
-                                <div className="flex flex-wrap gap-1 md:gap-2 mb-3 md:mb-4 text-[9px] md:text-[10px] font-mono uppercase text-slate-400">
-                                    <span className="flex items-center gap-1 bg-black/60 px-2 py-1 border border-slate-800"><MonitorPlay size={10}/> {hw.networkRoute}</span>
-                                    <span className="flex items-center gap-1 bg-black/60 px-2 py-1 border border-slate-800"><Globe size={10}/> {hw.ipType}</span>
-                                    <span className="flex items-center gap-1 bg-black/60 px-2 py-1 border border-slate-800"><Wifi size={10}/> {hw.bandwidthMbps}M</span>
-                                </div>
-                                <p className="text-xs text-slate-500 mb-3 md:mb-4 max-w-md border-l-2 border-slate-700 pl-2 italic hidden sm:block">{hw.description}</p>
                                 
-                                <div className="flex gap-px bg-slate-800 border border-slate-700 max-w-sm">
-                                    <div className="flex-1 bg-black/40 p-1 md:p-2 text-center">
-                                        <div className="text-[8px] md:text-[9px] text-slate-500 uppercase mb-1">{t.market.specs.cpu}</div>
-                                        <div className="font-mono text-white font-bold text-cyber-primary text-xs md:text-sm">{hw.cpuCores} C</div>
-                                    </div>
-                                    <div className="flex-1 bg-black/40 p-1 md:p-2 text-center">
-                                        <div className="text-[8px] md:text-[9px] text-slate-500 uppercase mb-1">{t.market.specs.ram}</div>
-                                        <div className="font-mono text-white font-bold text-cyber-secondary text-xs md:text-sm">{hw.ramGB} G</div>
-                                    </div>
-                                    <div className="flex-1 bg-black/40 p-1 md:p-2 text-center">
-                                        <div className="text-[8px] md:text-[9px] text-slate-500 uppercase mb-1">{t.market.specs.disk}</div>
-                                        <div className="font-mono text-white font-bold text-cyber-warning text-xs md:text-sm">{hw.diskGB} G</div>
-                                    </div>
+                                <div className="flex gap-2 text-[10px] font-mono">
+                                    <span className="text-cyber-primary flex items-center gap-0.5"><Cpu size={10}/> {hw.cpuCores}C</span>
+                                    <span className="text-cyber-secondary flex items-center gap-0.5"><Box size={10}/> {hw.ramGB}G</span>
+                                    <span className="text-cyber-warning flex items-center gap-0.5"><HardDrive size={10}/> {hw.diskGB}G</span>
                                 </div>
                             </div>
-                            <div className="flex flex-row md:flex-col items-center md:items-end justify-between md:justify-start gap-2 min-w-[120px] w-full md:w-auto mt-2 md:mt-0">
+                            
+                            {/* Right: Price & Action */}
+                            <div className="flex items-center gap-3 md:gap-4 justify-between md:justify-end">
                                 <div className="text-left md:text-right">
-                                    <div className="text-xl md:text-2xl font-bold text-cyber-success font-mono">${hw.purchaseCost}</div>
-                                    <div className="text-[9px] text-slate-500 uppercase tracking-wide hidden md:block">{t.market.setupFee}</div>
-                                    <div className="text-[10px] md:text-xs text-slate-400 mt-1">-${hw.dailyUpkeep}/{t.market.dailyCost}</div>
+                                    <div className="text-base md:text-lg font-bold text-cyber-success font-mono">${hw.purchaseCost}</div>
+                                    <div className="text-[9px] text-slate-500">-${hw.dailyUpkeep}/天</div>
                                 </div>
                                 <button 
                                 onClick={() => buyServer(hw)}
                                 disabled={gameState.cash < hw.purchaseCost}
-                                className={`px-4 md:px-6 py-2 md:py-3 w-auto md:w-full font-bold font-mono uppercase text-[10px] md:text-xs transition-all border mt-0 md:mt-2 clip-btn ${
+                                className={`px-3 py-1.5 font-bold font-mono uppercase text-[10px] transition-all border clip-btn flex-shrink-0 ${
                                     gameState.cash >= hw.purchaseCost 
-                                    ? 'bg-cyber-primary text-cyber-black border-cyber-primary hover:bg-white hover:shadow-[0_0_15px_rgba(0,240,255,0.5)]' 
+                                    ? 'bg-cyber-primary text-cyber-black border-cyber-primary hover:bg-white hover:shadow-[0_0_10px_rgba(0,240,255,0.4)]' 
                                     : 'bg-transparent text-slate-600 border-slate-800 cursor-not-allowed'
                                 }`}
                                 >
-                                {gameState.cash >= hw.purchaseCost ? t.market.buy : t.market.noFunds}
+                                {gameState.cash >= hw.purchaseCost ? '购买' : '余额不足'}
                                 </button>
                             </div>
                         </div>
@@ -897,130 +907,74 @@ export default function App() {
 
           {/* PLANS TAB */}
           {activeTab === 'plans' && (
-             <div className="space-y-4 md:space-y-6 animate-fade-in">
-                <div className="bg-cyber-panel/40 backdrop-blur border border-slate-700 p-4 md:p-6 relative overflow-hidden clip-card">
-                   <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-bl from-cyber-warning/10 to-transparent pointer-events-none"></div>
-
-                   <h3 className="text-white font-bold font-mono mb-4 md:mb-6 uppercase flex items-center gap-2 tracking-wider text-sm md:text-lg border-b border-slate-800 pb-2">
-                       <Zap size={18} className="text-cyber-warning"/> {t.plans.create}
-                   </h3>
-                   
-                   {gameState.servers.length === 0 && (
-                       <div className="bg-red-500/10 border-l-4 border-red-500 p-4 mb-4 text-red-400 text-xs font-mono flex items-center gap-2">
-                           <AlertTriangle size={16}/> {t.plans.noResources}
-                       </div>
-                   )}
-
-                   <div className="space-y-4 md:space-y-6">
-                      {/* Node Selector & Level Selector & Auto-Gen */}
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
-                         <div className="space-y-2">
-                             <label className="text-xs text-slate-400 font-mono uppercase tracking-widest flex items-center gap-2"><Server size={10}/> {t.plans.selectNode}</label>
-                             <select 
-                                value={newPlan.nodeId} 
-                                onChange={e => setNewPlan({...newPlan, nodeId: e.target.value})} 
-                                className="w-full bg-black/80 border border-slate-700 p-2 md:p-3 text-white font-mono text-xs md:text-sm focus:border-cyber-primary outline-none transition-all appearance-none"
-                             >
-                                 <option value="">-- Choose Node --</option>
-                                 {gameState.servers.map(s => (
-                                     <option key={s.id} value={s.id}>{getRegionFlag(HARDWARE_CATALOG.find(h => h.id === s.modelId)?.region)} {s.name} (Online)</option>
-                                 ))}
-                             </select>
-                         </div>
-                         <div className="space-y-2">
-                             <label className="text-xs text-slate-400 font-mono uppercase tracking-widest flex items-center gap-2"><Award size={10}/> {t.plans.selectLevel}</label>
-                             <select 
-                                value={newPlan.level} 
-                                onChange={e => setNewPlan({...newPlan, level: e.target.value})} 
-                                className="w-full bg-black/80 border border-slate-700 p-2 md:p-3 text-white font-mono text-xs md:text-sm focus:border-cyber-primary outline-none transition-all appearance-none"
-                             >
-                                 {PLAN_LEVELS.map(l => (
-                                     <option key={l} value={l}>{l}</option>
-                                 ))}
-                             </select>
-                         </div>
-                         <div className="flex items-end pb-1">
-                             <button 
-                               onClick={autoGeneratePlan}
-                               className="flex items-center gap-2 px-4 py-2 bg-cyber-secondary/20 text-cyber-secondary border border-cyber-secondary/50 hover:bg-cyber-secondary hover:text-white transition-all text-xs font-mono uppercase w-full justify-center clip-btn"
-                             >
-                                 <Wand2 size={14} /> {t.plans.autoGen}
-                             </button>
-                         </div>
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-4 md:gap-6">
-                         <div className="space-y-2">
-                             <label className="text-xs text-cyber-primary font-mono uppercase tracking-widest flex items-center gap-2"><TerminalIcon size={10}/> {t.plans.name}</label>
-                             <input type="text" value={newPlan.name} onChange={e => setNewPlan({...newPlan, name: e.target.value})} className="w-full bg-black/80 border border-slate-700 p-2 md:p-3 text-white font-mono text-xs md:text-sm focus:border-cyber-primary outline-none focus:shadow-[0_0_15px_rgba(0,240,255,0.1)] transition-all" placeholder="e.g. HK PRO-1"/>
-                         </div>
-                         <div className="space-y-2">
-                             <label className="text-xs text-cyber-success font-mono uppercase tracking-widest flex items-center gap-2"><DollarSign size={10}/> {t.plans.price}</label>
-                             <input type="number" value={newPlan.price} onChange={e => setNewPlan({...newPlan, price: Number(e.target.value)})} className="w-full bg-black/80 border border-slate-700 p-2 md:p-3 text-white font-mono text-xs md:text-sm focus:border-cyber-success outline-none focus:shadow-[0_0_15px_rgba(0,255,159,0.1)] transition-all" placeholder="5.00"/>
-                         </div>
-                      </div>
-
-                      <div className="space-y-4 p-4 md:p-5 bg-black/40 border border-slate-800 relative">
-                         <div className="absolute -top-2 left-4 bg-black px-2 text-[10px] text-slate-500 uppercase">Specs</div>
-                         <div>
-                             <div className="flex justify-between text-xs text-slate-400 mb-2 font-mono"><span>CPU Cores</span> <span className="text-cyber-primary">{newPlan.cpu} C</span></div>
-                             <input type="range" min="1" max="16" value={newPlan.cpu} onChange={e => setNewPlan({...newPlan, cpu: Number(e.target.value)})} className="w-full accent-cyber-primary h-1.5 bg-slate-700 appearance-none cursor-pointer hover:bg-slate-600"/>
-                         </div>
-                         <div>
-                             <div className="flex justify-between text-xs text-slate-400 mb-2 font-mono"><span>RAM</span> <span className="text-cyber-secondary">{newPlan.ram} GB</span></div>
-                             <input type="range" min="0.5" max="32" step="0.5" value={newPlan.ram} onChange={e => setNewPlan({...newPlan, ram: Number(e.target.value)})} className="w-full accent-cyber-secondary h-1.5 bg-slate-700 appearance-none cursor-pointer hover:bg-slate-600"/>
-                         </div>
-                         <div>
-                             <div className="flex justify-between text-xs text-slate-400 mb-2 font-mono"><span>Disk</span> <span className="text-cyber-warning">{newPlan.disk} GB</span></div>
-                             <input type="range" min="5" max="500" step="5" value={newPlan.disk} onChange={e => setNewPlan({...newPlan, disk: Number(e.target.value)})} className="w-full accent-cyber-warning h-1.5 bg-slate-700 appearance-none cursor-pointer hover:bg-slate-600"/>
-                         </div>
-                         <div>
-                             <div className="flex justify-between text-xs text-slate-400 mb-2 font-mono"><span>{t.plans.bandwidth}</span> <span className="text-cyan-400">{newPlan.bandwidth} Mbps</span></div>
-                             <input type="range" min="10" max="2000" step="10" value={newPlan.bandwidth} onChange={e => setNewPlan({...newPlan, bandwidth: Number(e.target.value)})} className="w-full accent-cyan-400 h-1.5 bg-slate-700 appearance-none cursor-pointer hover:bg-slate-600"/>
-                         </div>
-                      </div>
-                      
-                      <button onClick={createPlan} className="w-full py-3 md:py-4 bg-cyber-success text-cyber-black font-bold font-mono uppercase hover:bg-emerald-300 shadow-[0_0_15px_rgba(0,255,159,0.3)] active:scale-[0.99] transition-all clip-btn tracking-widest text-sm">
-                          {t.plans.create}
-                      </button>
+             <div className="space-y-3 animate-fade-in">
+                {/* Header with Create Button */}
+                <div className="flex justify-between items-center bg-cyber-panel/40 backdrop-blur border border-slate-700 p-3 clip-card">
+                   <div>
+                      <h3 className="text-white font-bold font-mono uppercase flex items-center gap-2 tracking-wider text-sm md:text-base">
+                          <Users size={16} className="text-cyber-primary"/> {t.plans.activeList}
+                      </h3>
+                      <p className="text-[10px] text-slate-500 font-mono mt-0.5">{gameState.plans.length} 个产品在售</p>
                    </div>
+                   <button 
+                     onClick={() => setIsCreatePlanModalOpen(true)}
+                     className="flex items-center gap-2 px-3 md:px-4 py-2 bg-cyber-success text-cyber-black font-bold font-mono uppercase hover:bg-emerald-300 transition-all text-xs clip-btn shadow-[0_0_10px_rgba(0,255,159,0.3)]"
+                   >
+                     <Plus size={14} /> 新产品
+                   </button>
                 </div>
 
-                <div className="space-y-2">
-                   <h4 className="text-xs font-bold text-slate-500 font-mono uppercase tracking-widest border-b border-slate-800 pb-2 pl-2">{t.plans.activeList}</h4>
-                   {gameState.plans.map(p => (
-                      <div key={p.id} className="bg-cyber-panel/40 border border-slate-700 p-3 md:p-4 flex justify-between items-center hover:border-slate-500 transition-colors relative overflow-hidden group clip-card">
-                         {/* Decoration */}
-                         <div className="absolute top-0 left-0 w-1 h-full bg-slate-700 group-hover:bg-cyber-primary transition-colors"></div>
+                {/* Compact Product List */}
+                <div className="space-y-1.5">
+                   {gameState.plans.length === 0 ? (
+                     <div className="bg-cyber-panel/20 border border-dashed border-slate-700 p-8 text-center">
+                        <Users size={32} className="mx-auto mb-3 text-slate-600" />
+                        <p className="text-slate-500 text-sm font-mono mb-4">暂无产品，点击上方按钮创建</p>
+                     </div>
+                   ) : (
+                     gameState.plans.map(p => (
+                      <div key={p.id} className="bg-cyber-panel/30 border border-slate-700/50 hover:border-slate-600 transition-all relative group">
+                         <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-cyber-primary opacity-0 group-hover:opacity-100 transition-opacity"></div>
                          
-                         <div className="pl-2 md:pl-3">
-                            <div className="flex items-center gap-2 mb-1">
-                                <span className="text-[9px] md:text-[10px] bg-slate-800 px-1.5 py-0.5 rounded text-slate-400 border border-slate-700 flex items-center gap-1">
-                                    {getRegionFlag(p.region)} {p.region}
-                                </span>
-                                <span className="text-[9px] md:text-[10px] bg-slate-800 px-1.5 py-0.5 rounded text-cyber-secondary border border-slate-700">{p.level}</span>
-                                <div className="font-bold text-white font-mono text-sm md:text-lg tracking-tight truncate max-w-[120px] sm:max-w-none">{p.name}</div>
+                         <div className="flex items-center justify-between p-2 md:p-2.5">
+                            {/* Left: Name & Specs */}
+                            <div className="flex items-center gap-3 flex-1 min-w-0">
+                               <div className="flex items-center gap-1.5">
+                                  <span className="text-[9px] bg-slate-800/80 px-1.5 py-0.5 text-slate-400 border border-slate-700/50">
+                                      {getRegionFlag(p.region)} {p.region}
+                                  </span>
+                                  <span className="text-[9px] bg-cyber-secondary/10 px-1.5 py-0.5 text-cyber-secondary border border-cyber-secondary/30">{p.level}</span>
+                               </div>
+                               <div className="font-bold text-white font-mono text-xs md:text-sm tracking-tight truncate">{p.name}</div>
                             </div>
-                            <div className="text-[10px] md:text-xs text-slate-400 font-mono flex gap-2 md:gap-3 mt-1">
-                                <span className="flex items-center gap-1"><Cpu size={10}/> {p.cpuCores} C</span>
-                                <span className="w-px h-3 bg-slate-700"></span>
-                                <span className="flex items-center gap-1"><Box size={10}/> {p.ramGB} G</span>
-                                <span className="w-px h-3 bg-slate-700"></span>
-                                <span className="flex items-center gap-1"><HardDrive size={10}/> {p.diskGB} G</span>
+                            
+                            {/* Middle: Specs in compact format */}
+                            <div className="hidden md:flex items-center gap-3 text-[10px] text-slate-400 font-mono mx-4">
+                                <span className="flex items-center gap-1"><Cpu size={10} className="text-cyber-primary"/> {p.cpuCores}C</span>
+                                <span className="flex items-center gap-1"><Box size={10} className="text-cyber-secondary"/> {p.ramGB}G</span>
+                                <span className="flex items-center gap-1"><HardDrive size={10} className="text-cyber-warning"/> {p.diskGB}G</span>
                             </div>
-                         </div>
-                         <div className="text-right flex items-center gap-2 md:gap-8">
-                            <div className="text-cyber-success font-mono font-bold text-sm md:text-xl border border-cyber-success/30 px-2 md:px-3 py-1 bg-cyber-success/5 clip-slope">
-                                ${p.priceMonthly}<span className="text-[10px] md:text-xs opacity-60">/m</span>
+                            
+                            {/* Right: Price, Users, Actions */}
+                            <div className="flex items-center gap-3 md:gap-4">
+                               <div className="text-cyber-success font-mono font-bold text-sm border border-cyber-success/20 px-2 py-0.5 bg-cyber-success/5">
+                                   ${p.priceMonthly}<span className="text-[9px] opacity-60">/m</span>
+                               </div>
+                               <div className="text-center min-w-[40px]">
+                                  <div className="text-base md:text-lg font-bold text-white font-mono leading-none">{p.activeUsers}</div>
+                                  <div className="text-[8px] text-slate-500 uppercase">{t.plans.users}</div>
+                               </div>
+                               <button 
+                                 onClick={() => deletePlan(p.id)} 
+                                 className="p-1.5 text-slate-600 hover:text-red-500 hover:bg-red-500/10 transition-all border border-transparent hover:border-red-500/30"
+                                 title="删除"
+                               >
+                                 <Trash2 size={14} />
+                               </button>
                             </div>
-                            <div className="hidden sm:block">
-                               <div className="text-xl md:text-2xl font-bold text-white font-mono">{p.activeUsers}</div>
-                               <div className="text-[9px] text-slate-500 uppercase">{t.plans.users}</div>
-                            </div>
-                            <button onClick={() => deletePlan(p.id)} className="p-2 md:p-3 text-slate-600 hover:text-red-500 hover:bg-red-500/10 transition-all border border-transparent hover:border-red-500/30"><Trash2 size={16} className="md:w-[18px] md:h-[18px]" /></button>
                          </div>
                       </div>
-                   ))}
+                   )))}
                 </div>
              </div>
           )}
@@ -1290,6 +1244,104 @@ export default function App() {
         </div>
 
       </div>
-    </div>
+
+      {/* Create Plan Modal */}
+      <Modal 
+        isOpen={isCreatePlanModalOpen} 
+        onClose={() => setIsCreatePlanModalOpen(false)}
+        title={t.plans.create}
+      >
+        {gameState.servers.length === 0 && (
+          <div className="bg-red-500/10 border-l-4 border-red-500 p-4 mb-4 text-red-400 text-xs font-mono flex items-center gap-2">
+              <AlertTriangle size={16}/> {t.plans.noResources}
+          </div>
+        )}
+
+        <div className="space-y-5">
+          {/* Node Selector & Level Selector & Auto-Gen */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+             <div className="space-y-2">
+                 <label className="text-xs text-slate-400 font-mono uppercase tracking-widest flex items-center gap-2"><Server size={10}/> {t.plans.selectNode}</label>
+                 <select 
+                    value={newPlan.nodeId} 
+                    onChange={e => setNewPlan({...newPlan, nodeId: e.target.value})} 
+                    className="w-full bg-black/80 border border-slate-700 p-2 text-white font-mono text-xs focus:border-cyber-primary outline-none transition-all appearance-none"
+                 >
+                     <option value="">-- Choose Node --</option>
+                     {gameState.servers.map(s => (
+                         <option key={s.id} value={s.id}>{getRegionFlag(HARDWARE_CATALOG.find(h => h.id === s.modelId)?.region)} {s.name} (Online)</option>
+                     ))}
+                 </select>
+             </div>
+             <div className="space-y-2">
+                 <label className="text-xs text-slate-400 font-mono uppercase tracking-widest flex items-center gap-2"><Award size={10}/> {t.plans.selectLevel}</label>
+                 <select 
+                    value={newPlan.level} 
+                    onChange={e => setNewPlan({...newPlan, level: e.target.value})} 
+                    className="w-full bg-black/80 border border-slate-700 p-2 text-white font-mono text-xs focus:border-cyber-primary outline-none transition-all appearance-none"
+                 >
+                     {PLAN_LEVELS.map(l => (
+                         <option key={l} value={l}>{l}</option>
+                     ))}
+                 </select>
+             </div>
+             <div className="flex items-end">
+                 <button 
+                   onClick={autoGeneratePlan}
+                   className="flex items-center gap-2 px-3 py-2 bg-cyber-secondary/20 text-cyber-secondary border border-cyber-secondary/50 hover:bg-cyber-secondary hover:text-white transition-all text-xs font-mono uppercase w-full justify-center clip-btn"
+                 >
+                     <Wand2 size={14} /> {t.plans.autoGen}
+                 </button>
+             </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+             <div className="space-y-2">
+                 <label className="text-xs text-cyber-primary font-mono uppercase tracking-widest flex items-center gap-2"><TerminalIcon size={10}/> {t.plans.name}</label>
+                 <input type="text" value={newPlan.name} onChange={e => setNewPlan({...newPlan, name: e.target.value})} className="w-full bg-black/80 border border-slate-700 p-2 text-white font-mono text-xs focus:border-cyber-primary outline-none focus:shadow-[0_0_15px_rgba(0,240,255,0.1)] transition-all" placeholder="e.g. HK PRO-1"/>
+             </div>
+             <div className="space-y-2">
+                 <label className="text-xs text-cyber-success font-mono uppercase tracking-widest flex items-center gap-2"><DollarSign size={10}/> {t.plans.price}</label>
+                 <input type="number" value={newPlan.price} onChange={e => setNewPlan({...newPlan, price: Number(e.target.value)})} className="w-full bg-black/80 border border-slate-700 p-2 text-white font-mono text-xs focus:border-cyber-success outline-none focus:shadow-[0_0_15px_rgba(0,255,159,0.1)] transition-all" placeholder="5.00"/>
+             </div>
+          </div>
+
+          <div className="space-y-3 p-4 bg-black/40 border border-slate-800 relative">
+             <div className="absolute -top-2 left-4 bg-cyber-panel px-2 text-[10px] text-slate-500 uppercase">规格配置</div>
+             <div>
+                 <div className="flex justify-between text-xs text-slate-400 mb-2 font-mono"><span>CPU Cores</span> <span className="text-cyber-primary">{newPlan.cpu} C</span></div>
+                 <input type="range" min="1" max="16" value={newPlan.cpu} onChange={e => setNewPlan({...newPlan, cpu: Number(e.target.value)})} className="w-full accent-cyber-primary h-1.5 bg-slate-700 appearance-none cursor-pointer hover:bg-slate-600"/>
+             </div>
+             <div>
+                 <div className="flex justify-between text-xs text-slate-400 mb-2 font-mono"><span>RAM</span> <span className="text-cyber-secondary">{newPlan.ram} GB</span></div>
+                 <input type="range" min="0.5" max="32" step="0.5" value={newPlan.ram} onChange={e => setNewPlan({...newPlan, ram: Number(e.target.value)})} className="w-full accent-cyber-secondary h-1.5 bg-slate-700 appearance-none cursor-pointer hover:bg-slate-600"/>
+             </div>
+             <div>
+                 <div className="flex justify-between text-xs text-slate-400 mb-2 font-mono"><span>Disk</span> <span className="text-cyber-warning">{newPlan.disk} GB</span></div>
+                 <input type="range" min="5" max="500" step="5" value={newPlan.disk} onChange={e => setNewPlan({...newPlan, disk: Number(e.target.value)})} className="w-full accent-cyber-warning h-1.5 bg-slate-700 appearance-none cursor-pointer hover:bg-slate-600"/>
+             </div>
+             <div>
+                 <div className="flex justify-between text-xs text-slate-400 mb-2 font-mono"><span>{t.plans.bandwidth}</span> <span className="text-cyan-400">{newPlan.bandwidth} Mbps</span></div>
+                 <input type="range" min="10" max="2000" step="10" value={newPlan.bandwidth} onChange={e => setNewPlan({...newPlan, bandwidth: Number(e.target.value)})} className="w-full accent-cyan-400 h-1.5 bg-slate-700 appearance-none cursor-pointer hover:bg-slate-600"/>
+             </div>
+          </div>
+          
+          <div className="flex gap-3">
+            <button 
+              onClick={() => setIsCreatePlanModalOpen(false)} 
+              className="flex-1 py-3 bg-transparent border border-slate-700 text-slate-400 font-bold font-mono uppercase hover:bg-slate-800 transition-all text-sm"
+            >
+              取消
+            </button>
+            <button 
+              onClick={createPlan} 
+              className="flex-1 py-3 bg-cyber-success text-cyber-black font-bold font-mono uppercase hover:bg-emerald-300 shadow-[0_0_15px_rgba(0,255,159,0.3)] active:scale-[0.99] transition-all clip-btn tracking-widest text-sm"
+            >
+              {t.plans.create}
+            </button>
+          </div>
+        </div>
+      </Modal>
+   </div>
   );
 }
